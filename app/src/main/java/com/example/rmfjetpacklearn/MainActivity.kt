@@ -54,7 +54,6 @@ fun StylingText() {
         Font(R.font.lexend_semi_vold, FontWeight.SemiBold),
         Font(R.font.lexend_bold, FontWeight.Bold),
         Font(R.font.lexend_extra_bold, FontWeight.ExtraBold)
-
     )
     Box(
         modifier = Modifier
