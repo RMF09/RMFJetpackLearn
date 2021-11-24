@@ -1,8 +1,11 @@
 package com.example.rmfjetpacklearn
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.animation.animateColor
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -36,40 +39,60 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
-            CL()
+            SimpleAnimation()
         }
     }
 }
 
 @Composable
-fun CL() {
-    val constraints = ConstraintSet {
-        val greenBox = createRefFor("greenBox")
-        val redBox = createRefFor("redBox")
+fun SimpleAnimation() {
+    var sizeState by remember { mutableStateOf(200.dp) }
 
-        constrain(greenBox) {
-            top.linkTo(parent.top)
-            start.linkTo(parent.start)
-            width = Dimension.value(100.dp)
-            height = Dimension.value(100.dp)
+    val size by animateDpAsState(
+        targetValue = sizeState,
+        tween(
+            durationMillis = 700,
+            easing = LinearEasing
+        )
+        /*spring(
+            Spring.DampingRatioHighBouncy
+        )*/
+        /*keyframes {
+            durationMillis = 5000
+            sizeState at 0 with LinearEasing
+            sizeState * 1.5f  at 1000 with FastOutSlowInEasing
+            sizeState * 2f at 5000
+
+        }*/
+    )
+
+    val infiniteTransition = rememberInfiniteTransition()
+    val color by infiniteTransition.animateColor(
+        initialValue = Color.Red,
+        targetValue = Color.Green,
+        animationSpec = infiniteRepeatable(
+            tween(
+                durationMillis = 2000,
+                delayMillis = 300,
+                easing = FastOutSlowInEasing
+            ),
+            repeatMode = RepeatMode.Reverse
+        )
+    )
+
+
+    Box(
+        modifier = Modifier
+            .size(size)
+            .background(color),
+        contentAlignment = Alignment.Center
+    ) {
+
+        Button(onClick = {
+            sizeState += 50.dp
+        }) {
+            Text("Increase Size")
         }
-
-        constrain(redBox) {
-            top.linkTo(greenBox.bottom)
-            end.linkTo(parent.end)
-            width = Dimension.value(80.dp)
-            height = Dimension.value(80.dp)
-        }
-    }
-
-    ConstraintLayout(constraints, modifier = Modifier.fillMaxSize()) {
-        Box(modifier = Modifier
-            .background(Color.Green)
-            .layoutId("greenBox"))
-
-        Box(modifier = Modifier
-            .background(Color.Red)
-            .layoutId("redBox"))
     }
 }
 
@@ -78,6 +101,6 @@ fun CL() {
 @Composable
 fun DefaultPreview() {
     RMFJetpackLearnTheme {
-        CL()
+        SimpleAnimation()
     }
 }
