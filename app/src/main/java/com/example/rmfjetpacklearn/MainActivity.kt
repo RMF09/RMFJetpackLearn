@@ -2,18 +2,25 @@ package com.example.rmfjetpacklearn
 
 import android.os.Bundle
 import android.view.MotionEvent
+import android.view.animation.OvershootInterpolator
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.MaterialTheme
+import androidx.compose.material.Surface
+import androidx.compose.material.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -24,7 +31,12 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import com.example.rmfjetpacklearn.ui.theme.RMFJetpackLearnTheme
+import kotlinx.coroutines.delay
 import kotlin.math.PI
 import kotlin.math.atan2
 import kotlin.math.roundToInt
@@ -34,127 +46,61 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
-            Box(
-                contentAlignment = Alignment.Center,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color(0xFF101010))
-            ) {
-                Row(
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.border(1.dp, Color.Green, RoundedCornerShape(10.dp))
-                        .padding(16.dp)
-                ) {
-                    var volume by remember {
-                        mutableStateOf(0f)
-                    }
-                    val barCount = 20
-                    MusicKnob(modifier = Modifier.size(100.dp)) {
-                        volume = it
-                    }
-                    Spacer(modifier = Modifier.width(20.dp))
-
-                    VolumeBar(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(30.dp),
-                        activeBars = (barCount * volume).roundToInt(),
-                        barCount = barCount
-                    )
-
-                }
+            Surface(color = Color(0xFF202020), modifier = Modifier.fillMaxSize()) {
+                Navigation()
             }
         }
     }
 }
 
 @Composable
-fun VolumeBar(
-    modifier: Modifier = Modifier,
-    activeBars: Int = 0,
-    barCount: Int = 10
-) {
-    BoxWithConstraints(
+fun Navigation() {
+    val navControler = rememberNavController()
+    NavHost(navController = navControler, startDestination = NavigationMain.SplashSreen.route) {
+        composable(NavigationMain.SplashSreen.route) {
+            SplashScreen(navController = navControler)
+        }
+        composable(NavigationMain.MainScreen.route) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text(text = "MAIN SCREEN", color = Color.White)
+            }
+        }
+    }
+}
+
+@Composable
+fun SplashScreen(navController: NavController) {
+    val scale = remember {
+        Animatable(0f)
+    }
+    LaunchedEffect(key1 = true) {
+        scale.animateTo(
+            targetValue = .3f,
+            animationSpec = tween(
+                durationMillis = 500,
+                easing = {
+                    OvershootInterpolator(2f).getInterpolation(it)
+                }
+            )
+        )
+        delay(3000L)
+        navController.navigate(NavigationMain.MainScreen.route)
+    }
+    Box(
         contentAlignment = Alignment.Center,
-        modifier = modifier
+        modifier = Modifier.fillMaxSize()
     ) {
-        val barWidth = remember {
-            constraints.maxWidth / (2f * barCount)
-        }
-        Canvas(modifier = modifier) {
-            for (i in 0..barCount) {
-                drawRoundRect(
-                    color = if (i in 0..activeBars) Color.Green else Color.DarkGray,
-                    topLeft = Offset(i * barWidth * 2f + barWidth / 2f, 0f),
-                    size = Size(barWidth, constraints.maxHeight.toFloat()),
-                    cornerRadius = CornerRadius(2f)
-                )
-            }
-        }
+        Image(
+            painter = painterResource(id = R.drawable.music_knob),
+            contentDescription = "logo",
+            modifier = Modifier.scale(scale = scale.value)
+        )
     }
 }
 
-@Composable
-fun MusicKnob(
-    modifier: Modifier,
-    limitAngle: Float = 25f,
-    onValueChange: (Float) -> Unit
-) {
-    var rotation by remember {
-        mutableStateOf(limitAngle)
-    }
-
-    var touchX by remember {
-        mutableStateOf(0f)
-    }
-    var touchY by remember {
-        mutableStateOf(0f)
-    }
-    var centerX by remember {
-        mutableStateOf(0f)
-    }
-    var centerY by remember {
-        mutableStateOf(0f)
-    }
-
-    Image(
-        painter = painterResource(id = R.drawable.music_knob),
-        contentDescription = "music_knob",
-        modifier = modifier
-            .fillMaxSize()
-            .onGloballyPositioned {
-                val windowBounds = it.boundsInWindow()
-                centerX = windowBounds.size.width / 2f
-                centerY = windowBounds.size.height / 2f
-            }
-            .pointerInteropFilter { motionEvent ->
-                touchX = motionEvent.x
-                touchY = motionEvent.y
-
-                val angle = -atan2(centerY - touchX, centerY - touchY) * (180f / PI).toFloat()
-
-                when (motionEvent.action) {
-                    MotionEvent.ACTION_DOWN,
-                    MotionEvent.ACTION_MOVE -> {
-                        if (angle !in -limitAngle..limitAngle) {
-                            val fixedAngle = if (angle in -180f..-limitAngle)
-                                360f + angle
-                            else angle
-
-                            rotation = fixedAngle
-
-                            val percent = (fixedAngle - limitAngle) / (360f - 2 * limitAngle)
-                            onValueChange(percent)
-                            true
-                        } else false
-                    }
-                    else -> false
-                }
-            }
-            .rotate(rotation)
-    )
-
+sealed class NavigationMain(val route: String) {
+    object MainScreen : NavigationMain(route = "main_screen")
+    object SplashSreen : NavigationMain(route = "splash_screen")
 }
 
 @Preview(showBackground = true)
